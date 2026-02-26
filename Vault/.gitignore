@@ -1,0 +1,6 @@
+# Exclude sensitive financial data by default.
+# Override by explicitly adding files: git add -f Vault/specific-file.csv
+*.csv
+*.pdf
+*.xlsx
+*.xls

@@ -1,0 +1,5 @@
+policy_type,carrier,policy_number,premium,renewal_date,covered_people
+auto,State Farm,SF-12345,120.50,2025-06-15,"roy,amy"
+home,State Farm,HF-67890,95.00,2025-08-01,"roy,amy"
+umbrella,Liberty Mutual,UM-11111,250.00,2026-01-10,"roy,amy,gavin,riley"
+term_life,Northwestern,TL-22222,85.00,2025-12-01,roy

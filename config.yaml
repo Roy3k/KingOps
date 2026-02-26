@@ -1,0 +1,33 @@
+# KingOps Dashboard Configuration
+
+# Paths to YNAB export files (relative to project root or absolute)
+# Supports both repo-root and Vault/ for future imports
+data:
+  plan_csv: "2025 Budget as of 2026-02-26 09-33 - Plan.csv"
+  register_csv: "2025 Budget as of 2026-02-26 09-33 - Register.csv"
+  vault_folder: "Vault"
+
+# Optional: category group -> allocation rollup overrides (defaults in cash_flow.ROLLUP_MAP)
+# rollup_map:
+#   "Core": "needs"
+#   "Subs": "wants"
+
+# King family household members
+household:
+  members:
+    - id: roy
+      name: Roy
+      role: adult
+      dob: "1974-12-04"
+    - id: amy
+      name: Amy
+      role: adult
+      dob: "1971-11-22"
+    - id: gavin
+      name: Gavin
+      role: dependent
+      dob: "2006-03-17"  # Assumed typo from 3/37/3006
+    - id: riley
+      name: Riley
+      role: dependent
+      dob: "2007-11-30"
