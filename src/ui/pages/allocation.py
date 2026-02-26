@@ -20,11 +20,12 @@ def render(data: YNABData) -> None:
     """Render Cash Flow Allocation view — Section 5.2 memo."""
     allocation = get_monthly_allocation(data)
     periods = sorted(set(a.period for a in allocation), reverse=True)
+    st.subheader("Monthly Allocation Review")
     selected_period = st.selectbox("Period", periods, index=0) if periods else None
 
     if selected_period:
         alloc_period = [a for a in allocation if a.period == selected_period]
-        df = pd.DataFrame(
+        review_df = pd.DataFrame(
             [
                 {
                     "Category Group": a.category_group,
@@ -36,7 +37,37 @@ def render(data: YNABData) -> None:
                 for a in alloc_period
             ]
         )
-        st.dataframe(df, use_container_width=True, hide_index=True)
+
+        if not review_df.empty:
+            total_planned = review_df["Planned"].sum()
+            total_actual = review_df["Actual"].sum()
+            total_variance = review_df["Variance"].sum()
+            income_total = max(get_allocation_sankey_data(data, selected_period).get("income", 0), 1)
+
+            k1, k2, k3, k4 = st.columns(4)
+            k1.metric("Planned", f"${total_planned:,.0f}")
+            k2.metric("Actual", f"${total_actual:,.0f}")
+            k3.metric("Variance", f"${total_variance:,.0f}")
+            k4.metric("Savings Rate", f"{(total_actual / income_total):.0%}")
+
+            available_groups = sorted(g for g in review_df["Category Group"].unique().tolist() if g)
+            selected_groups = st.multiselect(
+                "Filter category groups",
+                options=available_groups,
+                default=available_groups,
+                help="Focus review on specific category groups.",
+            )
+            filtered = review_df[review_df["Category Group"].isin(selected_groups)] if selected_groups else review_df
+            st.dataframe(
+                filtered.sort_values("Variance", key=lambda s: s.abs(), ascending=False),
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Planned": st.column_config.NumberColumn(format="$%.2f"),
+                    "Actual": st.column_config.NumberColumn(format="$%.2f"),
+                    "Variance": st.column_config.NumberColumn(format="$%.2f"),
+                },
+            )
 
     st.subheader("Allocation Flow")
     sankey = get_allocation_sankey_data(data, selected_period)
@@ -96,8 +127,22 @@ def render(data: YNABData) -> None:
     st.subheader("Variance Drivers")
     drivers = get_variance_drivers(data, allocation, top_n=10)
     if drivers:
-        for d in drivers:
-            st.write(f"**{d.merchant_or_category}** ({d.period}): ${d.variance:,.2f}")
+        driver_df = pd.DataFrame(
+            [
+                {
+                    "Driver": d.merchant_or_category,
+                    "Period": d.period,
+                    "Variance": d.variance,
+                }
+                for d in drivers
+            ]
+        )
+        st.dataframe(
+            driver_df.sort_values("Variance", key=lambda s: s.abs(), ascending=False),
+            use_container_width=True,
+            hide_index=True,
+            column_config={"Variance": st.column_config.NumberColumn(format="$%.2f")},
+        )
     else:
         st.caption("No significant variance drivers.")
 
@@ -107,8 +152,23 @@ def render(data: YNABData) -> None:
         st.success("No uncategorized transactions.")
     else:
         st.caption(f"{len(inbox)} transactions need categorization.")
-        for item in inbox[:20]:
-            st.write(f"- {item.date} | {item.payee} | ${item.amount:,.2f} | {item.account}")
+        inbox_df = pd.DataFrame(
+            [
+                {
+                    "Date": item.date,
+                    "Payee": item.payee,
+                    "Amount": item.amount,
+                    "Account": item.account,
+                }
+                for item in inbox
+            ]
+        )
+        st.dataframe(
+            inbox_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")},
+        )
 
     disclosure_drawer(
         "Allocation methodology",
