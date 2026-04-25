@@ -16,6 +16,7 @@ from src.ui.theme import theme
 
 # Object-oriented navigation (Section 4.2)
 NAV_ITEMS = [
+    ("Status", "status"),
     ("Household", "household"),
     ("People", "people"),
     ("Projects", "projects"),
@@ -29,6 +30,7 @@ NAV_ITEMS = [
 
 # Map nav keys to existing page modules
 PAGE_MAP = {
+    "status": "status",
     "assets": "net_worth",
     "capital": "allocation",
     "coverage": "risk",

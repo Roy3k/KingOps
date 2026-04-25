@@ -11,7 +11,7 @@ import yaml
 
 from src.ingest.ynab import discover_vault_datasets, load_ynab_data
 from src.ui.layout import NAV_ITEMS, PAGE_MAP
-from src.ui.pages import allocation, behavioral, household, net_worth, people, projects, risk
+from src.ui.pages import allocation, behavioral, household, net_worth, people, projects, risk, status
 
 # Page config
 st.set_page_config(
@@ -138,6 +138,8 @@ def main():
             people.render(data)
         elif mapped == "projects":
             projects.render(data)
+        elif mapped == "status":
+            status.render(data)
         else:
             st.subheader(nav_labels[nav_idx])
             if page_key == "obligations":
