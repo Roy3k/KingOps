@@ -66,6 +66,30 @@ Be the **ops department, not the agent**: run the film pipeline, maintain the co
 
 ---
 
+# Interlude — Four Seattle Routes to the Same First Team
+
+*Jordan Morris, Cody Baker, Nouhou, and Paul Rothrock all reached the Sounders first team by completely different roads. If the real dream behind the D1 goal is pro, these four are the honest map of the option space — and the reason to hold the D1 target loosely.*
+
+| Player | Route | Pro at age | Key fact |
+|---|---|---|---|
+| **Jordan Morris** | Sounders academy → Stanford (3 yrs, 2015 national title, Hermann Trophy) → homegrown deal | 21 | Turned down Werder Bremen to sign at home; college was the shop window, not the detour |
+| **Cody Baker** | Sounders academy → pro with Tacoma Defiance at 18 (2021) → homegrown deal (2023) | 18 | Skipped college entirely; loaned to New England in July 2026 at 23, still fighting for a first-team role |
+| **Nouhou** | Rainbow FC (Cameroon) → Sounders second team → MLS starter by 20 | 19 | Never touched the US youth/college system; the second-team ladder was the whole classroom |
+| **Paul Rothrock** | Sounders academy → Notre Dame → transferred to Georgetown (2019 national title) → 3rd-round pick, Toronto FC II (USL-1) → back to Tacoma Defiance → first-team deal at 24 | 22 | Breakout MLS season at 25 — five college years, a mid-college transfer, a late draft slot, and a release all failed to end the path |
+
+## What the four paths teach
+
+1. **College and pro are not opposites — for domestic players, college is usually a lever inside the pro path.** Morris used elite D1 as a finishing school with a degree track and homegrown rights waiting. The D1 programs on our target list should be evaluated partly as *pro-producing environments* (which rosters feed MLS SuperDraft / Next Pro contracts), not just as scholarships.
+2. **The fastest route carries the most risk.** Baker was a pro at 18 and looks prescient next to anyone's college plan — until you notice that at 23 he's on loan without a degree fallback. Speed isn't security. This is the standing argument for keeping the academic track alive at every fork.
+3. **The second-team ladder is a parallel education system.** Nouhou's route (and half of Rothrock's) ran through USL/MLS Next Pro sides that don't care about NCAA divisions at all. Tacoma Defiance, USL League One/Championship clubs, and open trials are re-entry points that stay open throughout and after college.
+4. **Rothrock is the archetype for our situation.** Multiple stops, a mid-college transfer, late physical/tactical maturity, a setback (drafted low, then leaving Toronto), and a hometown ecosystem that knew him — compounding beat pedigree. He became an MLS regular at 25. A 2026 college freshman reaching pro readiness at 22-23 (i.e., 2030-31) is *on time*, not late. The panic to "make it by 21" is false urgency.
+
+**Practical adjustments to Part 1:** stay visible inside the Seattle soccer ecosystem specifically (Ballard FC / USL2 summers, Crossfire alumni network, Defiance-adjacent trialist opportunities) because local clubs track local players across every level; treat a possible D2-then-D1 or D1-transfer move the way Rothrock treated Notre Dame→Georgetown — a normal repositioning, not a failure; and keep the degree math from Part 1 sacred, because it's the hedge every one of these paths except Morris's wishes it had.
+
+**Founder-lens tie-in:** nobody has mapped this option space. Four players, one club, four routes — and a family starting today cannot find a single resource that lays out academy/college/JUCO/second-team/international paths side by side with real names and real timelines. That's the content wedge for Part 2's playbook: pathway storytelling is the top of funnel, and the directory of "who moved up, by which route" is the product it converts into.
+
+---
+
 # Part 2 — The Founder Lens
 
 *"Others on his path" is not a small group, and the incumbents serving them are bad. Here's the Levels take and the Tan take.*
@@ -120,4 +144,5 @@ The venture-scale product is the **trust layer for the two-year transfer market*
 - [NBC: NCAA approves 5-years-to-play-5-seasons](https://www.nbcnews.com/sports/college-sports/ncaa-panel-approves-new-eligibility-rules-giving-division-athletes-5-y-rcna351531) · [Sportico: Pavia case analysis](https://www.sportico.com/law/analysis/2026/diego-pavia-18-seasons-ncaa-litigation-1234884328/) · [NCSA: does JUCO count against NCAA eligibility](https://www.ncsasports.org/blog/does-juco-count-against-ncaa-eligibility)
 - [NWAC: about (37 members)](https://nwacsports.com/aboutus) · [NWAC eligibility requirements](https://nwacsports.com/eligibilityrequirements) · [NWAC 2025 transfers, North Region](https://nwacsports.com/general/2025-26/releases/20250805qrhn8w) · [Bellevue College men's soccer](https://www.bellevuecollege.edu/athletics/sports/soccer-m/)
 - [UW men's soccer — reigning national champions, 2026 schedule](https://gohuskies.com/news/2026/6/17/reigning-national-champions-announce-2026-mens-soccer-schedule) · [Seattle U joins WCC](https://wccsports.com/news/2025/6/30/general-seattle-university-officially-joins-the-west-coast-conference.aspx) · [WCC men's soccer](https://wccsports.com/sports/msoc)
+- [Paul Rothrock — Wikipedia](https://en.wikipedia.org/wiki/Paul_Rothrock) · [MLS: Rothrock finds purpose on hometown Sounders](https://www.mlssoccer.com/news/paul-rothrock-finds-purpose-on-hometown-seattle-sounders) · [Sounders sign Rothrock](https://www.soundersfc.com/news/sounders-fc-signs-midfielder-paul-rothrock) · [Cody Baker — Wikipedia](https://en.wikipedia.org/wiki/Cody_Baker) · [MLS: Sounders sign homegrown Cody Baker](https://www.mlssoccer.com/news/seattle-sounders-sign-homegrown-defender-cody-baker) · [Sounders loan Baker to New England (July 2026)](https://www.soundersfc.com/news/sounders-fc-loans-defender-cody-baker-to-new-england)
 - [VRM: Is NCSA worth it (pricing)](https://www.getvrm.com/blog/is-ncsa-worth-it) · [Rosterhunter: NCSA reviews](https://www.rosterhunter.com/blog/ncsa-reviews) · [FieldLevel](https://www.fieldlevel.com/) · [Internespo: JUCO transfers & the portal](https://guide-internespo.com/the-truth-about-juco-transfers-and-the-ncaa-transfer-portal/) · [Select Generation: college soccer transfer guide](https://www.selectgeneration.com/blog-post/transferring-between-colleges-as-a-soccer-player-what-you-need-to-know-about-the-portal-rules-and-timing)
