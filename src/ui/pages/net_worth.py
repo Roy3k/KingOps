@@ -1,5 +1,6 @@
 """Net Worth Evolution view — terrain-like, attribution, calm disclosure."""
 
+import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
@@ -13,7 +14,7 @@ from src.ui.theme import theme
 
 def render(data: YNABData) -> None:
     """Render Net Worth Evolution view — Section 5.1 memo."""
-    nw = compute_net_worth(data)
+    nw = compute_net_worth(data, as_of=data.as_of)
     queue = compute_integrity_queue(data)
     t = theme
 
@@ -21,8 +22,7 @@ def render(data: YNABData) -> None:
 
     if nw.confidence_level.value == "Unknown":
         alert_card(
-            "No asset or liability data. Add account starting balances or import from YNAB. "
-            "Register CSV with Starting Balance rows, or manual asset/liability inventory.",
+            "No asset or liability data. Import a YNAB Register CSV, or add a manual asset/liability inventory.",
             severity=AlertSeverity.WARNING,
         )
 
@@ -47,14 +47,19 @@ def render(data: YNABData) -> None:
             help=f"Confidence: {nw.confidence_level.value}",
         )
 
-    st.caption(f"**Provenance:** YNAB starting balances | **Confidence:** {nw.confidence_level.value}")
+    st.caption(
+        f"**Provenance:** YNAB register running balances as of {data.as_of:%b %d, %Y} | "
+        f"**Confidence:** {nw.confidence_level.value}"
+    )
 
     # Soft line/bar — muted forest green, no grid clutter, light guides (Section 5.1)
     if data.assets or data.liabilities:
         fig = go.Figure()
-        assets_vals = [a.value for a in data.assets]
-        liab_vals = [l.principal_balance for l in data.liabilities]
-        labels = [a.name for a in data.assets] + [l.name for l in data.liabilities]
+        assets_sorted = sorted(data.assets, key=lambda a: a.value, reverse=True)
+        liabs_sorted = sorted(data.liabilities, key=lambda l: l.principal_balance, reverse=True)
+        assets_vals = [a.value for a in assets_sorted]
+        liab_vals = [l.principal_balance for l in liabs_sorted]
+        labels = [a.name for a in assets_sorted] + [l.name for l in liabs_sorted]
         values = assets_vals + [-v for v in liab_vals]
         colors = [t.color_accent.moss_green] * len(assets_vals) + [t.color_accent.driftwood_brown] * len(liab_vals)
         fig.add_trace(
@@ -83,6 +88,19 @@ def render(data: YNABData) -> None:
             ),
         )
         st.plotly_chart(fig, use_container_width=True)
+
+        st.dataframe(
+            pd.DataFrame(
+                [{"Account": a.name, "Kind": a.asset_type, "Balance": a.value, "Last activity": a.value_as_of} for a in assets_sorted]
+                + [
+                    {"Account": l.name, "Kind": l.liability_type.replace("_", " "), "Balance": -l.principal_balance, "Last activity": l.balance_as_of}
+                    for l in liabs_sorted
+                ]
+            ),
+            use_container_width=True,
+            hide_index=True,
+            column_config={"Balance": st.column_config.NumberColumn(format="$%.0f")},
+        )
 
     # Integrity Queue — calm expandable rows (Section 5.1)
     integrity_panel(

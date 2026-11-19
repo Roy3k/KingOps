@@ -11,7 +11,7 @@ import yaml
 
 from src.ingest.ynab import discover_vault_datasets, load_ynab_data
 from src.ui.layout import NAV_ITEMS, PAGE_MAP
-from src.ui.pages import allocation, behavioral, household, net_worth, people, projects, risk
+from src.ui.pages import allocation, behavioral, household, net_worth, obligations, people, projects, risk
 
 # Page config
 st.set_page_config(
@@ -82,7 +82,7 @@ def main():
     page_key = nav_keys[nav_idx]
 
     # Pages that need YNAB data
-    financial_pages = {"net_worth", "allocation", "risk", "behavioral"}
+    financial_pages = {"net_worth", "allocation", "obligations", "risk", "behavioral"}
     needs_ynab = PAGE_MAP.get(page_key) in financial_pages
 
     data = None
@@ -115,6 +115,7 @@ def main():
             st.caption("**Data lineage**")
             st.write(f"Transactions: {len(data.transactions):,}")
             st.write(f"Accounts: {len(data.accounts)}")
+            st.write(f"As of: {data.as_of:%b %d, %Y}")
             st.caption("**Provenance**")
             st.write("YNAB Plan & Register CSV")
         else:
@@ -128,6 +129,8 @@ def main():
             net_worth.render(data)
         elif mapped == "allocation":
             allocation.render(data)
+        elif mapped == "obligations":
+            obligations.render(data)
         elif mapped == "risk":
             risk.render(data)
         elif mapped == "behavioral":
@@ -140,9 +143,7 @@ def main():
             projects.render(data)
         else:
             st.subheader(nav_labels[nav_idx])
-            if page_key == "obligations":
-                st.caption("Debts, loans, and recurring obligations. Connect YNAB liability accounts or add manually.")
-            elif page_key == "documents":
+            if page_key == "documents":
                 st.caption("Important documents and file references. Coming soon.")
             else:
                 st.caption("This view is not yet implemented.")

@@ -2,7 +2,7 @@
 
 import hashlib
 import re
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -73,6 +73,8 @@ def _infer_asset_type(name: str, account_type: str) -> str:
         return "529"
     if "stocks" in name_lower or account_type == "investment":
         return "brokerage"
+    if account_type in ("checking", "savings"):
+        return "cash"
     return "other"
 
 
@@ -86,6 +88,18 @@ def _infer_liability_type(name: str, account_type: str) -> str:
     if account_type == "credit":
         return "credit_card"
     return "other"
+
+
+def _rate_from_name(name: str) -> Optional[float]:
+    """Parse the APR the account name leads with ("*19% Disney 3701" -> 0.19)."""
+    m = re.match(r"\*?\s*(\d+(?:\.\d+)?)%", name.strip())
+    return float(m.group(1)) / 100 if m else None
+
+
+def export_as_of(path: Path) -> Optional[date]:
+    """Export date from a YNAB filename ("... as of 2026-02-26 09-33 - Register.csv")."""
+    m = re.search(r"as of (\d{4}-\d{2}-\d{2})", path.name)
+    return datetime.strptime(m.group(1), "%Y-%m-%d").date() if m else None
 
 
 def _account_id(name: str) -> str:
@@ -136,8 +150,15 @@ def load_plan_csv(path: Path) -> tuple[list[Budget], IngestionAudit]:
     return budgets, audit
 
 
-def load_register_csv(path: Path) -> tuple[list[Account], list[Transaction], list[Asset], list[Liability], IngestionAudit]:
-    """Load YNAB Register CSV, extract accounts, transactions, assets, liabilities."""
+def load_register_csv(
+    path: Path,
+) -> tuple[list[Account], list[Transaction], list[Asset], list[Liability], IngestionAudit, date]:
+    """Load YNAB Register CSV, extract accounts, transactions, assets, liabilities.
+
+    Assets and liabilities are each account's running balance (starting balance plus
+    every transaction) as of the export date; later-dated rows are scheduled entries
+    that have not happened yet and are left out of the balances.
+    """
     df = pd.read_csv(path)
     audits: list[str] = []
     accounts_map: dict[str, Account] = {}
@@ -178,36 +199,8 @@ def load_register_csv(path: Path) -> tuple[list[Account], list[Transaction], lis
 
             acc_id = _account_id(acc_name)
 
-            # Starting balance -> Asset or Liability
+            # Starting balances feed the running balance below; they are not spending
             if payee == "Starting Balance":
-                amt = inflow - outflow
-                acc_type = accounts_map[acc_id].account_type if acc_id in accounts_map else "other"
-                if amt > 0:
-                    assets.append(
-                        Asset(
-                            id=f"asset_{acc_id}",
-                            asset_type=_infer_asset_type(acc_name, acc_type),
-                            name=acc_name,
-                            value=amt,
-                            value_as_of=date_val.date(),
-                            valuation_method="mark_to_market",
-                            confidence_level=ConfidenceLevel.RECONCILED,
-                            source_file_id=path.name,
-                        )
-                    )
-                else:
-                    liabilities.append(
-                        Liability(
-                            id=f"liab_{acc_id}",
-                            liability_type=_infer_liability_type(acc_name, acc_type),
-                            name=acc_name,
-                            principal_balance=abs(amt),
-                            balance_as_of=date_val.date(),
-                            linked_account_id=acc_id,
-                            confidence_level=ConfidenceLevel.RECONCILED,
-                            source_file_id=path.name,
-                        )
-                    )
                 continue
 
             # Regular transaction
@@ -258,6 +251,54 @@ def load_register_csv(path: Path) -> tuple[list[Account], list[Transaction], lis
                     transactions[j].linked_transaction_id = tx.id
                     break
 
+    # Running balance per account as of the export date
+    bal = df.assign(
+        _date=pd.to_datetime(df["Date"], format="%m/%d/%Y", errors="coerce").dt.date,
+        _amt=df["Inflow"].map(_parse_dollar) - df["Outflow"].map(_parse_dollar),
+    ).dropna(subset=["_date", "Account"])
+    as_of = export_as_of(path)
+    if as_of is None:
+        settled = bal[bal["Cleared"].isin(["Cleared", "Reconciled"])]["_date"]
+        as_of = settled.max() if len(settled) else date.today()
+    bal = bal[bal["_date"] <= as_of]
+
+    for acc_name, rows in bal.groupby(bal["Account"].astype(str).str.strip()):
+        balance = round(float(rows["_amt"].sum()), 2)
+        if not acc_name or abs(balance) < 0.005:
+            continue
+        acc_id = _account_id(acc_name)
+        acc_type = accounts_map[acc_id].account_type
+        last_date = rows["_date"].max()
+        conf = ConfidenceLevel.RECONCILED if (rows["Cleared"] == "Reconciled").all() else ConfidenceLevel.ESTIMATED
+        if acc_type in ("credit", "loan") or balance < 0:
+            liabilities.append(
+                Liability(
+                    id=f"liab_{acc_id}",
+                    liability_type=_infer_liability_type(acc_name, acc_type),
+                    name=acc_name,
+                    principal_balance=-balance,
+                    balance_as_of=last_date,
+                    rate=_rate_from_name(acc_name),
+                    linked_account_id=acc_id,
+                    confidence_level=conf,
+                    source_file_id=path.name,
+                )
+            )
+        else:
+            assets.append(
+                Asset(
+                    id=f"asset_{acc_id}",
+                    asset_type=_infer_asset_type(acc_name, acc_type),
+                    name=acc_name,
+                    value=balance,
+                    value_as_of=last_date,
+                    valuation_method="mark_to_market",
+                    linked_account_id=acc_id,
+                    confidence_level=conf,
+                    source_file_id=path.name,
+                )
+            )
+
     checksum = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
     audit = IngestionAudit(
         source_file_id=f"{path.name}_{checksum}",
@@ -267,7 +308,7 @@ def load_register_csv(path: Path) -> tuple[list[Account], list[Transaction], lis
         parse_errors=audits,
         checksum_hash=checksum,
     )
-    return list(accounts_map.values()), transactions, assets, liabilities, audit
+    return list(accounts_map.values()), transactions, assets, liabilities, audit, as_of
 
 
 class YNABData:
@@ -282,6 +323,7 @@ class YNABData:
         liabilities: list[Liability],
         plan_audit: IngestionAudit,
         register_audit: IngestionAudit,
+        as_of: Optional[date] = None,
     ):
         self.accounts = accounts
         self.transactions = transactions
@@ -290,6 +332,8 @@ class YNABData:
         self.liabilities = liabilities
         self.plan_audit = plan_audit
         self.register_audit = register_audit
+        # Export date: balances are as of this day; later-dated rows are scheduled, not actual
+        self.as_of = as_of or date.today()
 
 
 def discover_vault_datasets(project_root: Path, vault_folder: str = "Vault") -> list[tuple[Path, Path]]:
@@ -346,7 +390,7 @@ def load_ynab_data(
         raise FileNotFoundError(f"Register CSV not found: {register_path}")
 
     budgets, plan_audit = load_plan_csv(plan_path)
-    accounts, transactions, assets, liabilities, register_audit = load_register_csv(register_path)
+    accounts, transactions, assets, liabilities, register_audit, as_of = load_register_csv(register_path)
 
     return YNABData(
         accounts=accounts,
@@ -356,4 +400,5 @@ def load_ynab_data(
         liabilities=liabilities,
         plan_audit=plan_audit,
         register_audit=register_audit,
+        as_of=as_of,
     )

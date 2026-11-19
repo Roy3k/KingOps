@@ -5,8 +5,11 @@ import plotly.graph_objects as go
 import pandas as pd
 
 from src.compute.cash_flow import (
+    NON_SPENDING_GROUPS,
+    get_actual_periods,
     get_allocation_sankey_data,
     get_monthly_allocation,
+    get_spending_by_category,
     get_uncategorized_inbox,
     get_variance_drivers,
 )
@@ -19,7 +22,7 @@ from src.ui.theme import theme
 def render(data: YNABData) -> None:
     """Render Cash Flow Allocation view — Section 5.2 memo."""
     allocation = get_monthly_allocation(data)
-    periods = sorted(set(a.period for a in allocation), reverse=True)
+    periods = get_actual_periods(data)[::-1]  # newest first
     st.subheader("Monthly Allocation Review")
     selected_period = st.selectbox("Period", periods, index=0) if periods else None
 
@@ -43,12 +46,18 @@ def render(data: YNABData) -> None:
             total_actual = review_df["Actual"].sum()
             total_variance = review_df["Variance"].sum()
             income_total = max(get_allocation_sankey_data(data, selected_period).get("income", 0), 1)
+            # Spending excludes card/HELOC payment categories, whose purchases are already counted
+            spent = -review_df.loc[~review_df["Category Group"].isin(NON_SPENDING_GROUPS), "Actual"].sum()
 
             k1, k2, k3, k4 = st.columns(4)
             k1.metric("Planned", f"${total_planned:,.0f}")
             k2.metric("Actual", f"${total_actual:,.0f}")
             k3.metric("Variance", f"${total_variance:,.0f}")
-            k4.metric("Savings Rate", f"{(total_actual / income_total):.0%}")
+            k4.metric(
+                "Savings Rate",
+                f"{(income_total - spent) / income_total:.0%}",
+                help="(Income − spending) ÷ income. Transfers to college savings count as spending here.",
+            )
 
             available_groups = sorted(g for g in review_df["Category Group"].unique().tolist() if g)
             selected_groups = st.multiselect(
@@ -68,6 +77,34 @@ def render(data: YNABData) -> None:
                     "Variance": st.column_config.NumberColumn(format="$%.2f"),
                 },
             )
+
+    st.subheader("Spending by Category — Last 6 Months")
+    spending = get_spending_by_category(data, months=6)
+    if spending.empty:
+        st.caption("No spending activity in the plan.")
+    else:
+        month_cols = [c for c in spending.columns if c not in ("Category Group", "Category", "Average", "Total")]
+        by_group = spending.groupby("Category Group")[month_cols].sum()
+        fig = go.Figure(
+            [go.Bar(name=group, x=month_cols, y=by_group.loc[group].tolist()) for group in by_group.index]
+        )
+        fig.update_layout(
+            barmode="stack",
+            yaxis_title="Spent ($)",
+            margin=dict(l=20, r=20, t=20, b=20),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(232, 228, 220, 0.3)",
+            font=dict(family=theme.font_secondary.family),
+            legend=dict(orientation="h", y=-0.15),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(
+            spending,
+            use_container_width=True,
+            hide_index=True,
+            column_config={c: st.column_config.NumberColumn(format="$%.0f") for c in [*month_cols, "Average", "Total"]},
+        )
+        st.caption("Card and HELOC payment categories are excluded; the purchases they cover are counted in their own categories.")
 
     st.subheader("Allocation Flow")
     sankey = get_allocation_sankey_data(data, selected_period)

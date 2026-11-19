@@ -78,7 +78,7 @@ class Asset(BaseModel):
     """Asset with valuation."""
 
     id: str
-    asset_type: str  # home | vehicle | brokerage | 401k | ira | 529 | other
+    asset_type: str  # home | vehicle | brokerage | 401k | ira | 529 | cash | other
     name: str
     value: float
     value_as_of: date

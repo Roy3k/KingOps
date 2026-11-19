@@ -36,7 +36,7 @@ PAGE_MAP = {
     "household": "household",
     "people": "people",
     "projects": "projects",
-    "obligations": None,
+    "obligations": "obligations",
     "documents": None,
 }
 

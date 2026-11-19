@@ -25,6 +25,11 @@ ROLLUP_MAP = {
 }
 
 
+# Plan groups that are not spending: income, and card/HELOC payment categories
+# (the purchases those payments cover are already counted in their own categories)
+NON_SPENDING_GROUPS = {"Inflow", "Credit Card Payments"}
+
+
 @dataclass
 class MonthlyAllocation:
     """Planned vs actual for a month."""
@@ -73,6 +78,56 @@ def _parse_month(period: str) -> Optional[tuple[int, int]]:
         return None
 
 
+def sort_periods(periods, reverse: bool = False) -> list[str]:
+    """Order 'Jan 2025'-style periods by calendar, not alphabet."""
+    return sorted(set(periods), key=lambda p: _parse_month(p) or (0, 0), reverse=reverse)
+
+
+def get_actual_periods(data: YNABData) -> list[str]:
+    """Plan periods up to the export month, oldest first (later months hold only scheduled entries)."""
+    cutoff = (data.as_of.year, data.as_of.month)
+    return [p for p in sort_periods(b.period for b in data.budgets) if (_parse_month(p) or (9999, 0)) <= cutoff]
+
+
+def get_period_income(data: YNABData, period: str) -> float:
+    """Income received in a period: register inflows to Ready to Assign, up to the export date."""
+    ym = _parse_month(period)
+    return sum(
+        t.amount
+        for t in data.transactions
+        if t.category_group == "Inflow"
+        and (t.date_posted.year, t.date_posted.month) == ym
+        and t.date_posted <= data.as_of
+    )
+
+
+def get_spending_by_category(data: YNABData, months: int = 6) -> pd.DataFrame:
+    """Spending per category for the last `months` plan periods up to the export month.
+
+    One row per category with any activity; one column per period (oldest first) plus
+    Average and Total. Spending is positive, refunds negative. Income and card-payment
+    categories are left out.
+    """
+    periods = get_actual_periods(data)[-months:]
+    rows = [
+        {"Category Group": b.category_group, "Category": b.category, "period": b.period, "spent": -b.activity}
+        for b in data.budgets
+        if b.period in periods and b.category_group not in NON_SPENDING_GROUPS
+    ]
+    if not rows:
+        return pd.DataFrame(columns=["Category Group", "Category", *periods, "Average", "Total"])
+    table = (
+        pd.DataFrame(rows)
+        .pivot_table(index=["Category Group", "Category"], columns="period", values="spent", aggfunc="sum", fill_value=0.0)
+        .reindex(columns=periods, fill_value=0.0)
+    )
+    table = table[table.abs().sum(axis=1) > 0]
+    table["Average"] = table[periods].mean(axis=1)
+    table["Total"] = table[periods].sum(axis=1)
+    table.columns.name = None
+    return table.sort_values("Total", ascending=False).reset_index()
+
+
 def get_monthly_allocation(data: YNABData) -> list[MonthlyAllocation]:
     """Budget vs actual by month and category."""
     # Aggregate budget by period, category
@@ -96,7 +151,7 @@ def get_monthly_allocation(data: YNABData) -> list[MonthlyAllocation]:
         seen.add(key)
         planned = budget_by_period.get(key, 0.0)
         actual = actual_by_period.get(key, 0.0)
-        variance = actual - planned  # positive = overspent vs plan
+        variance = -actual - planned  # activity is negative for spending; positive = overspent vs plan
         rollup = ROLLUP_MAP.get(b.category_group, "other")
         result.append(
             MonthlyAllocation(
@@ -171,10 +226,10 @@ def get_allocation_sankey_data(data: YNABData, period: Optional[str] = None) -> 
     if period:
         allocation = [a for a in allocation if a.period == period]
     else:
-        # Use latest month
-        periods = sorted(set(a.period for a in allocation), reverse=True)
-        if periods:
-            allocation = [a for a in allocation if a.period == periods[0]]
+        # Use the latest month with actuals
+        periods = get_actual_periods(data)
+        period = periods[-1] if periods else None
+        allocation = [a for a in allocation if a.period == period]
 
     income = sum(a.actual for a in allocation if a.rollup == "income")
     needs = sum(a.actual for a in allocation if a.rollup == "needs")
@@ -184,10 +239,9 @@ def get_allocation_sankey_data(data: YNABData, period: Optional[str] = None) -> 
 
     # Outflows are negative in YNAB activity
     if income <= 0:
-        # Infer income from Inflow category in transactions
-        for t in data.transactions:
-            if t.amount > 0 and (t.category_group == "Inflow" or "Ready to Assign" in (t.category_raw or "")):
-                income += t.amount
+        # The Plan export has no Inflow rows: take the period's income from the register
+        if period:
+            income = get_period_income(data, period)
         # Approximate from budget if needed
         if income <= 0:
             income = abs(needs) + abs(wants) + abs(debt) + abs(savings)
